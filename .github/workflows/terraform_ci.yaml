@@ -1,0 +1,78 @@
+name: Terraform CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: terraform validate
+        run: |
+          echo "terraform validate"
+      
+      - name: terraform init
+        run: |
+          echo "terraform init"
+      
+      - name: terraform plan
+        run: |
+          echo "terraform plan"
+
+      - name: unit tests
+        run: |
+          echo "unit tests"
+
+      - name: static code analysis
+        run: |
+          echo "static code analysis"
+      
+      - name: build artifact
+        run: |
+          echo "publish build artifact: code, .terraform.lock, plan"
+  
+  deploy:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - name: build artifact
+        run: |
+          echo "download build artifact"
+      
+      - name: terraform apply plan
+        run: |
+          echo "terraform apply plan"
+      
+      - name: configuration drift
+        run: |
+          echo "terraform plan to check configuration drift"
+          echo "terraform apply to fix configuration drift"
+          echo "try several time, raise error if configuration drift is not solved"
+  
+  package:
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - name: build artifact
+        run: |
+          echo "download build artifact"
+      
+      - name: package
+        run: |
+          echo "create package"
+      
+      - name: artifactory
+        run: |
+          echo "push package to artifactory"
+
+  # Rollback is necessary to have good state of dev environment and test all changes in batch but not incrementally.
+  # Rollback must be done only if `terraform apply` failed in the middle. If apply has not started we do no need to perform rollback.
+  # Rollback is not about high quality commits. Rollback about state of dev environment. NO. Deployment is just another test of code quality.  
+  rollback:
+    needs: [deploy]
+    if: ${{ !success() }}  # rollback if deploy is failed or cancelled.
+    runs-on: ubuntu-latest
+    steps:
+      - name: revert PR commit
+        run: |
+          echo "revert PR commit"
